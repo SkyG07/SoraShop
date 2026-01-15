@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useProductStore } from "../store/productStore";
 import { useCartStore } from "../store/cartStore";
 import { ShoppingCart } from "lucide-react";
-import toast from "react-hot-toast";
 
 const ProductsPage = () => {
   const { products, fetchProducts } = useProductStore();
@@ -22,8 +21,8 @@ const ProductsPage = () => {
   const closeModal = () => setSelectedProduct(null);
 
   const handleAddToCart = () => {
-    addToCart(selectedProduct, quantity);
-    toast.success(`${selectedProduct.name} added to cart`);
+    if (!selectedProduct) return;
+    addToCart(selectedProduct, quantity); // store handles login + toast
     closeModal();
   };
 

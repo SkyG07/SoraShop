@@ -1,37 +1,65 @@
-import User from "../models/User.js";
+import Cart from "../models/Cart.js"; // create Cart model
+import Product from "../models/Product.js";
 
 // GET cart
 export const getCart = async (req, res) => {
-  const user = await User.findById(req.user._id).populate("cart.product");
-  res.json(user.cart);
+  const cart = await Cart.findOne({ user: req.user._id }).populate(
+    "items.product"
+  );
+  res.json(cart?.items || []);
 };
 
-// ADD / UPDATE cart item
+// ADD to cart
 export const addToCart = async (req, res) => {
-  const { productId, quantity } = req.body;
+  const { productId, quantity = 1 } = req.body;
+  const product = await Product.findById(productId);
+  if (!product) return res.status(404).json({ message: "Product not found" });
 
-  const user = await User.findById(req.user._id);
-
-  const itemIndex = user.cart.findIndex(
-    (item) => item.product.toString() === productId
-  );
-
-  if (itemIndex > -1) {
-    user.cart[itemIndex].quantity += quantity;
-  } else {
-    user.cart.push({ product: productId, quantity });
+  let cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) {
+    cart = await Cart.create({ user: req.user._id, items: [] });
   }
 
-  await user.save();
-  res.json(user.cart);
+  const existingItem = cart.items.find(
+    (i) => i.product.toString() === productId
+  );
+  if (existingItem) {
+    existingItem.quantity += quantity;
+  } else {
+    cart.items.push({ product: productId, quantity });
+  }
+
+  await cart.save();
+  const populatedCart = await cart.populate("items.product");
+  res.json(populatedCart.items);
+};
+
+// UPDATE quantity
+export const updateCartItem = async (req, res) => {
+  const { productId } = req.params;
+  const { quantity } = req.body;
+
+  const cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) return res.status(404).json({ message: "Cart not found" });
+
+  const item = cart.items.find((i) => i.product.toString() === productId);
+  if (!item) return res.status(404).json({ message: "Product not in cart" });
+
+  item.quantity = quantity;
+  await cart.save();
+  const populatedCart = await cart.populate("items.product");
+  res.json(populatedCart.items);
 };
 
 // REMOVE item
 export const removeFromCart = async (req, res) => {
-  const user = await User.findById(req.user._id);
-  user.cart = user.cart.filter(
-    (item) => item.product.toString() !== req.params.productId
-  );
-  await user.save();
-  res.json(user.cart);
+  const { productId } = req.params;
+
+  const cart = await Cart.findOne({ user: req.user._id });
+  if (!cart) return res.status(404).json({ message: "Cart not found" });
+
+  cart.items = cart.items.filter((i) => i.product.toString() !== productId);
+  await cart.save();
+  const populatedCart = await cart.populate("items.product");
+  res.json(populatedCart.items);
 };
