@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: "https://sorashop.onrender.com/api",
 });
 
 // Add token automatically if user is logged in
